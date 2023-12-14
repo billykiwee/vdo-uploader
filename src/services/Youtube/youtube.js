@@ -1,5 +1,4 @@
-const { authenticate } = require("./auth");
-const oAuth_credentials = require("./client_secret_848882013918-vufpg7nvpjcrgluf5n6q147ugdsm08ls.apps.googleusercontent.com");
+const oAuth_credentials = require("../../../client_secret.json");
 const { google } = require("googleapis");
 const fs = require("fs");
 
@@ -80,33 +79,27 @@ function authenticateAndUpload(auth) {
   uploadVideo(youtube);
 }
 
-function uploadVideo(youtube) {
-  const videoPath = "./vdo.mp4";
-  const title = "Titre de votre vidéo";
-  const description = "Description de votre vidéo";
-  const tags = ["tag1", "tag2", "tag3"];
-  const categoryId = "24";
+function uploadVideo(youtube, options) {
+  const { videoPath, title, description, tags, categoryId, privacyStatus } =
+    options;
+
+  const requestBody = {
+    snippet: {
+      title,
+      description,
+      tags,
+      categoryId,
+    },
+    status: {
+      privacyStatus,
+    },
+  };
 
   // Créer la demande pour la publication de la vidéo
   youtube.videos.insert(
     {
-      part: "snippet,status",
-      kind: "youtube#video",
-      resource: {
-        snippet: {
-          categoryId,
-          title,
-          description,
-          tags,
-        },
-        status: {
-          privacyStatus: "public", // Vous pouvez changer cela en 'private' si nécessaire
-        },
-      },
-    },
-    {
-      // Configurer l'objet de la demande média
-      mediaType: "video/mp4",
+      part: Object.keys(requestBody).join(","),
+      requestBody,
       media: {
         body: require("fs").createReadStream(videoPath),
       },

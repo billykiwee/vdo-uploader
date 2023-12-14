@@ -3,7 +3,7 @@ const fs = require("fs");
 const readline = require("readline");
 
 const SCOPES = ["https://www.googleapis.com/auth/youtube.upload"];
-const TOKEN_PATH = "token.json"; // Le chemin vers le fichier token.json
+const TOKEN_PATH = "../../../token.json"; // Le chemin vers le fichier token.json
 
 function getNewToken(oauth2Client, callback) {
   const authUrl = oauth2Client.generateAuthUrl({
@@ -40,7 +40,7 @@ function getNewToken(oauth2Client, callback) {
 }
 
 function authenticate(callback) {
-  const credentials = require("./client_secret_848882013918-vufpg7nvpjcrgluf5n6q147ugdsm08ls.apps.googleusercontent.com"); // Remplacez par le chemin correct de vos identifiants OAuth 2.0
+  const credentials = require("../../../client_secret.json"); // Remplacez par le chemin correct de vos identifiants OAuth 2.0
 
   const { client_secret, client_id, redirect_uris } = credentials.web;
   const oAuth2Client = new google.auth.OAuth2(
