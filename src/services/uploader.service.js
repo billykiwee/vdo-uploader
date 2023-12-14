@@ -1,17 +1,20 @@
-const { youtubeUploader } = require("./Youtube/youtube");
+const { YoutubeService } = require("./Youtube/youtube");
 
 class UploaderService {
-  videoData = {
-    videoPath: "src/vdo.mp4",
-    title: "Titre de votre vidéo",
-    description: "Description de votre vidéo",
-    tags: ["developer", "coding"],
-    categoryId: "24",
-    privacyStatus: "public",
-  };
+  constructor() {
+    this.youtubeService = YoutubeService;
+    this.videoData = {
+      videoPath: "src/vdo.mp4",
+      title: "Titre de votre vidéo",
+      description: "Description de votre vidéo",
+      tags: ["developer", "coding"],
+      categoryId: "24",
+      privacyStatus: "public",
+    };
+  }
 
   youtube() {
-    return youtubeUploader(this.videoData);
+    return this.youtubeService.uploader(this.videoData);
   }
 
   tiktok() {}

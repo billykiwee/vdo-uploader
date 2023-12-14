@@ -2,112 +2,121 @@ const oAuth_credentials = require("../../../client_secret.json");
 const { google } = require("googleapis");
 const fs = require("fs");
 
-const OAuth2 = google.auth.OAuth2;
+class YoutubeService {
+  constructor() {
+    const { client_id, client_secret, redirect_uris } = oAuth_credentials.web;
 
-const { client_id, client_secret, redirect_uris } = oAuth_credentials.web;
+    this.#oauth2Client = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uris[0]
+    );
+    this.#TOKEN_PATH = "token.json";
+  }
 
-const oauth2Client = new OAuth2(client_id, client_secret, redirect_uris[0]);
-
-const TOKEN_PATH = "token.json";
-
-function youtubeUploader(options) {
-  fs.readFile(TOKEN_PATH, (err, token) => {
-    if (err) {
-      getAccessToken(oauth2Client);
-    } else {
-      oauth2Client.credentials = JSON.parse(token);
-      authenticateAndUpload(oauth2Client, options);
-    }
-  });
-}
-
-function getAccessToken(oauth2Client) {
-  const authUrl = oauth2Client.generateAuthUrl({
-    access_type: "offline",
-  });
-
-  console.log(
-    "Veuillez autoriser l'accès à cette application en visitant cette URL:",
-    authUrl
-  );
-
-  const readline = require("readline");
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  rl.question("Code d'autorisation : ", (code) => {
-    rl.close();
-    oauth2Client.getToken(code, (err, token) => {
+  uploader(options) {
+    fs.readFile(this.TOKEN_PATH, (err, token) => {
       if (err) {
-        return console.error(
-          "Erreur lors de l'obtention du jeton d'accès :",
-          err
-        );
+        this.getNewToken(oauth2Client, options);
+      } else {
+        this.oauth2Client.credentials = JSON.parse(token);
+
+        this.authenticateAndUpload(this.oauth2Client, options);
       }
-      oauth2Client.credentials = token;
-      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
+    });
+  }
+
+  getNewToken(oauth2Client, options) {
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: "offline",
+      scope: ["https://www.googleapis.com/auth/youtube.upload"],
+    });
+
+    console.log(
+      "Veuillez autoriser l'accès à cette application en visitant cette URL:",
+      authUrl
+    );
+
+    const readline = require("readline");
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    rl.question("Code d'autorisation : ", (code) => {
+      rl.close();
+      oauth2Client.getToken(code, (err, token) => {
         if (err) {
-          console.error(
-            "Erreur lors de l'enregistrement du jeton d'accès :",
+          return console.error(
+            "Erreur lors de l'obtention du jeton d'accès :",
             err
           );
-        } else {
-          console.log("Jeton d'accès enregistré avec succès.");
-          authenticateAndUpload(oauth2Client);
         }
+        oauth2Client.credentials = token;
+        fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
+          if (err) {
+            console.error(
+              "Erreur lors de l'enregistrement du jeton d'accès :",
+              err
+            );
+          } else {
+            console.log("Jeton d'accès enregistré avec succès.");
+            this.authenticateAndUpload(oauth2Client, options);
+          }
+        });
       });
     });
-  });
-}
+  }
 
-function authenticateAndUpload(auth, options) {
-  const youtube = google.youtube({
-    version: "v3",
-    auth: auth,
-  });
+  authenticateAndUpload(auth, options) {
+    const youtube = google.youtube({
+      version: "v3",
+      auth: auth,
+    });
 
-  uploadVideo(youtube, options);
-}
+    this.initializeUpload(youtube, options);
+  }
 
-function uploadVideo(youtube, options) {
-  const { videoPath, title, description, tags, categoryId, privacyStatus } =
-    options;
+  initializeUpload(youtube, options) {
+    const { videoPath, title, description, tags, categoryId, privacyStatus } =
+      options;
 
-  const requestBody = {
-    snippet: {
-      title,
-      description,
-      tags,
-      categoryId,
-    },
-    status: {
-      privacyStatus,
-    },
-  };
-
-  youtube.videos.insert(
-    {
-      part: Object.keys(requestBody).join(","),
-      requestBody,
-      media: {
-        body: require("fs").createReadStream(videoPath),
+    const requestBody = {
+      snippet: {
+        title,
+        description,
+        tags,
+        categoryId,
       },
-    },
-    (err, response) => {
-      if (err) {
-        console.error("Erreur lors de la publication de la vidéo:", err);
-        console.error("Réponse complète de l'API YouTube:", err.response.data);
-        return;
-      }
+      status: {
+        privacyStatus,
+      },
+    };
 
-      const videoId = response.data.id;
-      console.log(
-        "La vidéo a été publiée avec succès. ID de la vidéo : " + videoId
-      );
-    }
-  );
+    youtube.videos.insert(
+      {
+        part: Object.keys(requestBody).join(","),
+        requestBody,
+        media: {
+          body: require("fs").createReadStream(videoPath),
+        },
+      },
+      (err, response) => {
+        if (err) {
+          console.error("Erreur lors de la publication de la vidéo:", err);
+          console.error(
+            "Réponse complète de l'API YouTube:",
+            err.response.data
+          );
+          return;
+        }
+
+        const videoUrl = `https://www.youtube.com/watch?v=${response.data.id}`;
+
+        console.log("La vidéo a été publiée sur YouTube - " + videoUrl);
+      }
+    );
+  }
 }
 
-module.exports = { youtubeUploader };
+module.exports = { YoutubeService };
